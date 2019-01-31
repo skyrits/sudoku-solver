@@ -3,7 +3,7 @@
 
 This script demonstrates a backtracking algorithm application, implemented in JavaScript.
 
-Pseudocode:
+##Pseudocode:
 ```
 Define a 2D 9x9 Array and fill it with the problem values (use 0 at empty cells).
 Find row, col of an unassigned cell (cell[row,col] with 0)
