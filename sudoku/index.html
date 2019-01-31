@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script type="text/javascript">
+/*
+	Sky's JavaScript Sudoku Solver.
+	
+	MIT License
+	
+    Copyright (c) 2016 Spyridon Kyritsis.
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell co-
+	pies of the Software, and to permit persons to whom the Software is furnished
+	to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IM-
+	PLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+	FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+	COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+	IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNEC-
+	TION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+	
+	This script demonstrates a backtracking algorithm application, implemented in 
+	JavaScript.
+
+	Pseudocode:
+	Define a 2D 9x9 Array and fill it with the problem values (use 0 at empty cells).
+	Find row, col of an unassigned cell (cell[row,col] with 0)
+	If there is none, return true (problem solved)
+	For digits from 1 to 9
+		If there is no conflict for digit at cell[row,col]
+			Assign digit to cell[row,col] and recursively try fill in rest of board
+			If recursion successful, return true
+			If not successful, remove digit and try another
+	If all digits have been tried and nothing worked, return false to trigger back tracking
+*/
+
+//Game object constructor
+function Game(board, parent) {
+	this.board = board;
+	this.messageBox = document.getElementById("messageBox");
+	this.createBoard('in', parent);
+}
+
+//Defining method play(row, col) on Game object.
+//The method implements the recursive algorithm.
+Game.prototype.play = function(row, col) {
+    var cell = this.findEmptyCell(row, col);
+    row = cell[0];
+    col = cell[1];
+    //if no empty cell  
+    if (row == -1) {
+        this.messageBox.innerHTML = "Το έλυσα!";
+        return true;
+    }
+    for (var num = 1; num <= 9; num++) {
+		if (this.noConflicts(row, col, num) ) {   
+            this.board[row][col] = num;
+			if (this.play(row, col)) {
+                return true;
+            }
+            // mark cell as empty (with 0)    
+            this.board[row][col] = 0;
+        }
+    }
+    //all digits have been tried and nothing worked, return false to trigger back tracking
+    return false;
+}
+
+//Method findEmptyCell(row,col)
+//scanning for empty cells (with 0)
+Game.prototype.findEmptyCell = function(row, col) {
+	for ( ; row < 9; row++) {
+        for ( ; col < 9; col++) {
+            if (this.board[row][col] == 0) return [row, col];	
+		}
+		col = 0; //if a line is scanned start from first column of the next line 
+	}
+    return [-1, -1];
+}
+
+//Method noConflicts(row, col, num)
+Game.prototype.noConflicts = function(row, col, num) {
+    return 	this.numAcceptedByRow(row, num) &&
+			this.numAcceptedByCol(col, num) &&
+			this.numAcceptedByBox(row, col, num);
+}
+
+//Method numAcceptedByRow(row, num)
+Game.prototype.numAcceptedByRow = function(row, num) {
+    for (var col = 0; col < 9; col++) {
+		if (this.board[row][col] == num) { return false; }
+	}
+    return true;
+}
+
+//Method numAcceptedByCol(col, num)
+Game.prototype.numAcceptedByCol = function(col, num) {
+    for (var row = 0; row < 9; row++) {
+		if (this.board[row][col] == num) { return false; }
+	}
+    return true;    
+}
+
+//Method numAcceptedByBox(row, col, num)
+Game.prototype.numAcceptedByBox = function(row, col, num) {
+    row = Math.floor(row/3)*3;
+    col = Math.floor(col/3)*3;
+    for (var r = 0; r < 3; r++) {
+        for (var c = 0; c < 3; c++) {
+            if (this.board[row + r][col + c] == num) { return false; }
+		}
+	}
+    return true;
+}
+
+//Method drawBoard()
+Game.prototype.drawBoard = function() {
+	var cellOut;
+	var cellIn;
+    for (var i = 0; i < 9; i++) {
+        for (var j = 0; j < 9; j++) {
+    		cellOut = document.forms["outForm"].elements["out["+i+"]["+j+"]"];
+			cellOut.value = this.board[i][j];
+			cellIn = document.forms["inForm"].elements["in["+i+"]["+j+"]"];
+			if (cellIn.value == cellOut.value) {
+				cellOut.className = "bolder";
+			}
+        }
+    }
+}
+
+//Method readBoard()
+Game.prototype.readBoard = function() {
+	for (var i = 0; i < 9; i++) {
+        for (var j = 0; j < 9; j++) {
+			this.board[i][j] = document.forms["inForm"].elements["in["+i+"]["+j+"]"].value;
+        }
+    }
+}
+
+//Method createBoard(name, parent)
+//parent is the id name of the DIV holder for the game forms
+Game.prototype.createBoard = function(name, parent) {
+	var f = document.createElement("form");
+	var p = document.getElementById(parent);
+	var c;
+	var br;
+	
+	for (var i = 0; i < 9; i++) {
+        for (var j = 0; j < 9; j++) {
+			c = document.createElement("input");
+            f.appendChild(c);
+			c.type = "text";
+			c.maxLength = 1;
+			c.pattern ="[0-9]{1}";
+			c.onclick = function () { this.select(); }
+			c.name = name+"["+i+"]["+j+"]";
+			c.value = this.board[i][j];
+        }
+		br = document.createElement("br");
+		f.appendChild(br);
+    }
+	f.name = name + "Form";
+	p.appendChild(f);
+	if ( name == "in") { 
+		var game = this;
+		//Submit button--------------------------------------
+		var button = document.createElement("input");
+		button.type = "button";
+		button.value = "Λύση";
+		button.onclick = function() {
+							var start = new Date().getTime();
+							game.readBoard();
+							if (game.play(0,0)) {
+								if (document.forms.length > 1) p.removeChild(document.forms[1]);
+								game.createBoard('out', parent);
+								game.drawBoard();
+							} else {
+								game.messageBox.innerHTML = "Δε λύνεται.";
+							}
+							var end = new Date().getTime();
+							var time = end - start;
+							game.messageBox.innerHTML += " Χρόνος εκτέλεσης: " + time + "msec";
+						};
+		document.forms["inForm"].appendChild(button);
+		
+		//Reset button--------------------------------------
+		var reset = document.createElement("input");
+		reset.type = "button";
+		reset.value = "Μηδένισμα";
+		reset.onclick = function() {
+							if (document.forms.length > 1) p.removeChild(document.forms[1]);
+							for (var i = 0; i < 9; i++) {
+								for (var j = 0; j < 9; j++) {
+									document.forms["inForm"].elements["in["+i+"]["+j+"]"].value = 0;
+								}
+							}
+							game.messageBox.innerHTML = "";
+						};
+		document.forms["inForm"].appendChild(reset);
+	}
+}
+</script>
+
+<script type="text/javascript">
+//Usage Example
+//On page load we create a new Game object with an empty board (a 2D 9x9 Array filled with 0).
+
+function init() {
+	var myGame =new Game([
+        [0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0]
+    ], "holderDiv");
+}
+
+</script>
+<style type="text/css">
+* {	font-family: Verdana, Arial;	padding:0;	margin:0;}
+h1 {	text-align: center;}
+#holderDiv form {	padding: 4em;	display: inline-block;	vertical-align:top;}
+#holderDiv input {	width: 100%;	padding: 0.4em;	font-size:1.2em;	text-align:center;}
+#holderDiv input[type="text"]:focus {	border-color: red;}
+#holderDiv input[type="text"] {	width: 1em;	height: 1em;	border:solid 1px black;	color: #333;}
+#holderDiv input[type="text"]:nth-of-type(3n) {	margin-right: 0.1em;}
+#holderDiv input[type="text"]:nth-of-type(27n) {	margin-bottom: 0.1em;}
+.bolder {	font-weight: bold;}
+#messageBox {	position: absolute;	bottom: 0.2em;	width: 100%;	color: #A00;	font-size: 1.5em;	font-weight: bold;	text-align: center;}
+</style>
+</head>
+<!-- Example Page -->
+<body onload="init()">
+<!-- Page Title -->
+<h1>Επίλυση προβλημάτων Sudoku</h1>
+<p>
+Συμπληρώνουμε τον πίνακα με τα νούμερα του προβλήματος.<br>
+Στα κενά τετράγωνα βάζουμε 0 (μηδέν).
+Πατάμε λύση και μας εμφανίζεται ένας νέος πίνακας με τη λύση του προβλήματος.
+</p> 
+<!-- Game DIV -->
+<div id="holderDiv"></div>
+<!-- Messages DIV -->
+<div id="messageBox"></div>
+</body>
+</html>
